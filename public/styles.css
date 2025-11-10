@@ -1,0 +1,72 @@
+:root {
+    --primary-color: #6f7460;   
+    --dark-color: #2c2d29;      
+    --mid-neutral: #d9dbd2;     
+    --light-color: #f7f7f5; 
+    --light-green: #bfc077;    
+    --accent-tan: #a07f5a;      
+    --accent-sage: #9fb39c;     
+    --accent-rust: #c76d4a;     
+    --accent-darkrust: #9a3f25;
+}
+
+* {
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+    background-color: var(--light-color);
+    color: var(--dark-color);
+    margin: 0;
+    padding: 0;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+}
+
+main {
+    text-align: center;
+    background-color: var(--mid-neutral);
+    border: 3px solid var(--accent-sage);
+    border-radius: 16px;
+    padding: 3rem 2rem;
+    max-width: 600px;
+    width: 90%;
+    box-shadow: 0 6px 30px rgba(0, 0, 0, 0.15);
+}
+
+h1 {
+    margin:auto;
+    text-align: center;
+    display: block;
+    color: var(--primary-color);
+    font-size: 2rem;
+    margin-bottom: 1rem;
+}
+
+h2 {
+    margin-left:1%;
+}
+
+p {
+    margin-left: 1%;
+    color: var(--dark-color);
+    font-size: 1.1rem;
+    margin-bottom: 1.5rem;
+}
+
+a {
+    display: inline-block;
+    background-color: var(--accent-sage);
+    color: var(--light-color);
+    text-decoration: none;
+    font-weight: bold;
+    padding: 0.7rem 1.5rem;
+    border-radius: 8px;
+    transition: background-color 0.3s, transform 0.2s;
+}
+
+a:hover {
+    background-color: var(--accent-rust);
+}
