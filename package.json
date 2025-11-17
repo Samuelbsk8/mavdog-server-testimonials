@@ -32,6 +32,7 @@
     "is-extglob": "^2.1.1",
     "is-glob": "^4.0.3",
     "is-number": "^7.0.0",
+    "joi": "^18.0.1",
     "jsonfile": "^6.2.0",
     "locate-path": "^5.0.0",
     "make-dir": "^3.1.0",

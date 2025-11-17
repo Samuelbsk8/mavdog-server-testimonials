@@ -1,17 +1,22 @@
 const express = require("express");
 const cors = require("cors");
 const multer = require("multer");
+const Joi = require("joi");
 const path = require("path");
 
 const app = express();
 
-app.use(express.static(path.join(__dirname, "public")));
+app.use(express.static("public"));
 app.use(express.json());
 app.use(cors());
 
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, "./public/images/"),
-  filename: (req, file, cb) => cb(null, file.originalname),
+  destination: (req, file, cb) => {
+    cb(null, "./public/images/");
+  },
+  filename: (req, file, cb) => {
+    cb(null, file.originalname);
+  },
 });
 const upload = multer({ storage });
 
@@ -91,21 +96,46 @@ let reviews = [
 ];
 
 app.get("/api/reviews", (req, res) => {
-  console.log("Fetching all reviews");
-  res.json(reviews);
+  res.send(reviews);
 });
 
-app.get("/api/reviews/:id", (req, res) => {
-  const review = reviews.find((r) => r._id === parseInt(req.params.id));
-  if (review) res.json(review);
-  else res.status(404).json({ message: "Review not found" });
+const validateReview = (review) => {
+  const schema = Joi.object({
+    client_name: Joi.string().min(2).required(),
+    dog_name: Joi.string().min(2).required(),
+    stars: Joi.number().min(1).max(5).required(),
+    review: Joi.string().min(5).required(),
+    training_type: Joi.string().min(3).required(),
+    img_name: Joi.allow("")
+  });
+
+  return schema.validate(review);
+};
+
+app.post("/api/reviews", upload.single("img"), (req, res) => {
+  console.log("POST request received");
+
+  const result = validateReview(req.body);
+
+  if (result.error) {
+    return res.status(400).send(result.error.details[0].message);
+  }
+
+  const newReview = {
+    _id: reviews.length + 1,
+    client_name: req.body.client_name,
+    dog_name: req.body.dog_name,
+    stars: req.body.stars,
+    review: req.body.review,
+    training_type: req.body.training_type,
+    img_name: req.file ? "images/" + req.file.filename : null
+
+  };
+
+  reviews.push(newReview);
+
+  res.status(200).send(newReview);
 });
-
-
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
-});
-
 
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => console.log(`Mavdog K-9 Server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`Testimonials Server running on port ${PORT}`));
