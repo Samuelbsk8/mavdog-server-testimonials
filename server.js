@@ -108,7 +108,9 @@ app.put("/api/reviews/:id", upload.single("img"), (req, res) => {
   review.training_type = objForValidation.training_type;
   if (req.file) review.img_name = `images/${req.file.filename}`;
 
+  res.setHeader("Content-Type", "application/json");
   res.status(200).json(review);
+
 });
 
 app.delete("/api/reviews/:id", (req, res) => {
