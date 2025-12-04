@@ -3,16 +3,24 @@ const cors = require("cors");
 const mongoose = require("mongoose");
 const Joi = require("joi");
 const multer = require("multer");
-const upload = multer();
 require("dotenv").config();
+
 const app = express();
+
 app.use(cors());
 app.use(express.json());
+
+app.use(express.static("public"));
+app.get("/", (req, res) => {
+  res.sendFile(__dirname + "/public/index.html");
+});
 
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => console.log("MongoDB Connected"))
   .catch((err) => console.error("Mongo Error:", err));
+
+const upload = multer();
 
 const Testimonial = mongoose.model(
   "Testimonial",
@@ -45,7 +53,9 @@ app.post("/api/reviews", upload.single("img"), async (req, res) => {
 
   let imgString = null;
   if (req.file) {
-    imgString = `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`;
+    imgString = `data:${req.file.mimetype};base64,${req.file.buffer.toString(
+      "base64"
+    )}`;
   }
 
   const review = new Testimonial({
@@ -63,7 +73,9 @@ app.put("/api/reviews/:id", upload.single("img"), async (req, res) => {
 
   let imgString = undefined;
   if (req.file) {
-    imgString = `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`;
+    imgString = `data:${req.file.mimetype};base64,${req.file.buffer.toString(
+      "base64"
+    )}`;
   }
 
   const updated = await Testimonial.findByIdAndUpdate(
