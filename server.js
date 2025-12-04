@@ -1,186 +1,87 @@
 const express = require("express");
 const cors = require("cors");
-const multer = require("multer");
+const mongoose = require("mongoose");
 const Joi = require("joi");
-const path = require("path");
-const fs = require("fs");
-
+const multer = require("multer");
+const upload = multer();
+require("dotenv").config();
 const app = express();
-app.use(express.static("public"));
-app.use(express.json());
 app.use(cors());
+app.use(express.json());
 
-const imagesDir = path.join(__dirname, "public", "images");
-if (!fs.existsSync(imagesDir)) fs.mkdirSync(imagesDir, { recursive: true });
+mongoose
+  .connect(process.env.MONGO_URI)
+  .then(() => console.log("MongoDB Connected"))
+  .catch((err) => console.error("Mongo Error:", err));
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, imagesDir),
-  filename: (req, file, cb) => cb(null, file.originalname),
+const Testimonial = mongoose.model(
+  "Testimonial",
+  new mongoose.Schema({
+    client_name: String,
+    dog_name: String,
+    stars: Number,
+    review: String,
+    training_type: String,
+    img: String,
+  })
+);
+
+const reviewSchema = Joi.object({
+  client_name: Joi.string().min(2).required(),
+  dog_name: Joi.string().min(1).required(),
+  stars: Joi.number().min(1).max(5).required(),
+  review: Joi.string().min(5).required(),
+  training_type: Joi.string().required(),
 });
-const upload = multer({ storage });
 
-let reviews = [
-  {
-    _id: 1,
-    client_name: "Jason Britton",
-    dog_name: "Harra",
-    stars: 5,
-    review: "Harra learned basic obedience so quickly! The trainers were patient and professional.",
-    training_type: "Board & Train",
-    img_name: "images/Harra-laydown.JPG"
-  },
-  {
-    _id: 2,
-    client_name: "Sarah Miller",
-    dog_name: "Ronin",
-    stars: 4,
-    review: "Ronin improved his recall skills a lot. Highly recommend MAVDOG K-9!",
-    training_type: "Private Sessions",
-    img_name: "images/ronin-sit.JPG"
-  },
-  {
-    _id: 3,
-    client_name: "Emily Johnson",
-    dog_name: "Max",
-    stars: 5,
-    review: "The virtual consultation was amazing! I could see results immediately.",
-    training_type: "Virtual Consultation",
-    img_name: "images/max.jpg"
-  },
-  {
-    _id: 4,
-    client_name: "Tom Lee",
-    dog_name: "Bella",
-    stars: 5,
-    review: "Bella's behavior has improved tremendously. The trainers really care!",
-    training_type: "Boarding",
-    img_name: "images/bella.jpg"
-  },
-  {
-    _id: 5,
-    client_name: "Anna White",
-    dog_name: "Charlie",
-    stars: 4,
-    review: "Charlie learned agility skills quickly and had fun throughout!",
-    training_type: "Board & Train",
-    img_name: "images/charlie.jpg"
-  },
-  {
-    _id: 6,
-    client_name: "Michael Brown",
-    dog_name: "Rocky",
-    stars: 5,
-    review: "Rocky is so much more confident now. Excellent trainers.",
-    training_type: "Private Sessions",
-    img_name: "images/rocky.jpg"
-  },
-  {
-    _id: 7,
-    client_name: "Laura Green",
-    dog_name: "Luna",
-    stars: 5,
-    review: "The Board & Train program was perfect for Luna. Can't recommend enough!",
-    training_type: "Board & Train",
-    img_name: "images/luna.jpg"
-  },
-  {
-    _id: 8,
-    client_name: "David Kim",
-    dog_name: "Scout",
-    stars: 4,
-    review: "Scout learned new tricks fast, trainers were super helpful and friendly.",
-    training_type: "Virtual Consultation",
-    img_name: "images/scout.jpg"
-  }
-];
-
-const validateReview = (rev) => {
-  const schema = Joi.object({
-    client_name: Joi.string().min(2).required(),
-    dog_name: Joi.string().min(1).required(),
-    stars: Joi.number().min(1).max(5).required(),
-    review: Joi.string().min(5).required(),
-    training_type: Joi.string().min(3).required(),
-    img_name: Joi.any().optional(),
-  });
-  return schema.validate(rev);
-};
-
-app.get("/api/reviews", (req, res) => {
+app.get("/api/reviews", async (req, res) => {
+  const reviews = await Testimonial.find().sort({ _id: -1 });
   res.json(reviews);
 });
 
-app.get("/api/reviews/:id", (req, res) => {
-  const r = reviews.find((x) => x._id === parseInt(req.params.id));
-  if (!r) return res.status(404).send("Review not found");
-  res.json(r);
+app.post("/api/reviews", upload.single("img"), async (req, res) => {
+  const { error } = reviewSchema.validate(req.body);
+  if (error) return res.status(400).send(error.details[0].message);
+
+  let imgString = null;
+  if (req.file) {
+    imgString = `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`;
+  }
+
+  const review = new Testimonial({
+    ...req.body,
+    img: imgString,
+  });
+
+  const saved = await review.save();
+  res.json(saved);
 });
 
-app.post("/api/reviews", upload.single("img"), (req, res) => {
-  const objForValidation = {
-    client_name: req.body.client_name,
-    dog_name: req.body.dog_name,
-    stars: req.body.stars ? parseInt(req.body.stars) : undefined,
-    review: req.body.review,
-    training_type: req.body.training_type,
-  };
-  const result = validateReview(objForValidation);
-  if (result.error) return res.status(400).send(result.error.details[0].message);
+app.put("/api/reviews/:id", upload.single("img"), async (req, res) => {
+  const { error } = reviewSchema.validate(req.body);
+  if (error) return res.status(400).send(error.details[0].message);
 
-  const newReview = {
-    _id: reviews.length ? reviews[reviews.length - 1]._id + 1 : 1,
-    client_name: objForValidation.client_name,
-    dog_name: objForValidation.dog_name,
-    stars: objForValidation.stars,
-    review: objForValidation.review,
-    training_type: objForValidation.training_type,
-    img_name: req.file ? `images/${req.file.filename}` : null,
-  };
+  let imgString = undefined;
+  if (req.file) {
+    imgString = `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`;
+  }
 
-  reviews.push(newReview);
-  res.status(200).json(newReview);
+  const updated = await Testimonial.findByIdAndUpdate(
+    req.params.id,
+    {
+      ...req.body,
+      ...(imgString ? { img: imgString } : {}),
+    },
+    { new: true }
+  );
+
+  res.json(updated);
 });
 
-app.put("/api/reviews/:id", upload.single("img"), (req, res) => {
-  const review = reviews.find((x) => x._id === parseInt(req.params.id));
-  if (!review) return res.status(404).send("Review not found");
-
-  const objForValidation = {
-    client_name: req.body.client_name,
-    dog_name: req.body.dog_name,
-    stars: req.body.stars ? parseInt(req.body.stars) : undefined,
-    review: req.body.review,
-    training_type: req.body.training_type,
-  };
-  const result = validateReview(objForValidation);
-  if (result.error) return res.status(400).send(result.error.details[0].message);
-
-  review.client_name = objForValidation.client_name;
-  review.dog_name = objForValidation.dog_name;
-  review.stars = objForValidation.stars;
-  review.review = objForValidation.review;
-  review.training_type = objForValidation.training_type;
-  if (req.file) review.img_name = `images/${req.file.filename}`;
-
-  res.setHeader("Content-Type", "application/json");
-  res.status(200).json(review);
-
-});
-
-app.delete("/api/reviews/:id", (req, res) => {
-  const id = parseInt(req.params.id);
-  const idx = reviews.findIndex((r) => r._id === id);
-  if (idx === -1) return res.status(404).send("Review not found");
-  const removed = reviews.splice(idx, 1)[0];
-  res.status(200).json(removed);
-});
-
-app.get("/", (req, res) => {
-  res.send(`
-    <h1>Mavdog Testimonials API</h1>
-    <p><a href="/api/reviews">/api/reviews</a></p>
-  `);
+app.delete("/api/reviews/:id", async (req, res) => {
+  await Testimonial.findByIdAndDelete(req.params.id);
+  res.sendStatus(200);
 });
 
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => console.log(`Testimonials Server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
